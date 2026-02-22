@@ -18,15 +18,31 @@ type SlogLogger struct {
 
 var _ gas.Logger = (*SlogLogger)(nil)
 
-// NewSlogLogger creates a gas.Logger backed by the given slog logger.
-// eventInitialCapacity controls the pre-allocated capacity for attribute slices
-// on each log event, reducing allocations for events with a known number of fields.
-// Values <= 0 default to 5.
-func NewSlogLogger(logger *slog.Logger, eventInitialCapacity int) *SlogLogger {
-	if eventInitialCapacity <= 0 {
-		eventInitialCapacity = 5
+// SlogLoggerCtor defines a constructor function that returns an implementation of the gas.Logger interface.
+type SlogLoggerCtor func() gas.Logger
+
+// SlogLoggerOption is a functional option type for configuring an instance of SlogLogger.
+type SlogLoggerOption func(*SlogLogger)
+
+// WithSlogInstance sets the provided slog.Logger instance to the SlogLogger.
+func WithSlogInstance(logger *slog.Logger) SlogLoggerOption {
+	return func(l *SlogLogger) { l.logger = logger }
+}
+
+// WithEventInitialCapacity sets the initial capacity for event attributes in a SlogLogger instance.
+func WithEventInitialCapacity(capacity int) SlogLoggerOption {
+	return func(l *SlogLogger) { l.eventInitialCapacity = capacity }
+}
+
+// NewSlogLogger returns a SlogLoggerCtor that constructs a SlogLogger with the provided SlogLoggerOption values.
+func NewSlogLogger(opts ...SlogLoggerOption) SlogLoggerCtor {
+	return func() gas.Logger {
+		l := &SlogLogger{eventInitialCapacity: 5}
+		for _, opt := range opts {
+			opt(l)
+		}
+		return l
 	}
-	return &SlogLogger{logger: logger, eventInitialCapacity: eventInitialCapacity}
 }
 
 func (l *SlogLogger) Trace(msg string) gas.LogEvent {

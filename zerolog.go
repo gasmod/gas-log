@@ -17,9 +17,26 @@ type ZeroLogLogger struct {
 
 var _ gas.Logger = (*ZeroLogLogger)(nil)
 
-// NewZeroLogLogger creates a gas.Logger backed by the given zerolog logger.
-func NewZeroLogLogger(logger *zerolog.Logger) *ZeroLogLogger {
-	return &ZeroLogLogger{logger: logger}
+// ZeroLogLoggerCtor is a function type that constructs and returns a gas.Logger instance.
+type ZeroLogLoggerCtor func() gas.Logger
+
+// ZeroLogLoggerOption represents a functional option for configuring a ZeroLogLogger instance.
+type ZeroLogLoggerOption func(*ZeroLogLogger)
+
+// WithZeroLogInstance sets the underlying zerolog.Logger instance for the ZeroLogLogger.
+func WithZeroLogInstance(logger *zerolog.Logger) ZeroLogLoggerOption {
+	return func(l *ZeroLogLogger) { l.logger = logger }
+}
+
+// NewZeroLogLogger creates a new ZeroLogLoggerCtor with optional configuration applied via ZeroLogLoggerOption functions.
+func NewZeroLogLogger(opts ...ZeroLogLoggerOption) ZeroLogLoggerCtor {
+	return func() gas.Logger {
+		l := &ZeroLogLogger{}
+		for _, opt := range opts {
+			opt(l)
+		}
+		return l
+	}
 }
 
 func (l *ZeroLogLogger) Trace(msg string) gas.LogEvent {

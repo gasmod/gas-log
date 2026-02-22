@@ -15,8 +15,15 @@ type NoOpLogger struct{}
 
 var _ gas.Logger = (*NoOpLogger)(nil)
 
-// NewNoOpLogger returns the shared NoOpLogger singleton.
-func NewNoOpLogger() *NoOpLogger { return nopLogger }
+// NoOpLoggerCtor defines a constructor function that returns a nop-logger implementing the gas.Logger interface.
+type NoOpLoggerCtor func() gas.Logger
+
+// NewNoOpLogger returns a NoOpLoggerCtor that constructs a nop-logger implementing the gas.Logger interface.
+func NewNoOpLogger() NoOpLoggerCtor {
+	return func() gas.Logger {
+		return nopLogger
+	}
+}
 
 func (l *NoOpLogger) Trace(string) gas.LogEvent { return nopLogEvent }
 func (l *NoOpLogger) Debug(string) gas.LogEvent { return nopLogEvent }
@@ -45,7 +52,7 @@ func (c *NoOpLoggerContext) Bool(string, bool) gas.LoggerContext              { 
 func (c *NoOpLoggerContext) Err(string, error) gas.LoggerContext              { return c }
 func (c *NoOpLoggerContext) Duration(string, time.Duration) gas.LoggerContext { return c }
 func (c *NoOpLoggerContext) Any(string, any) gas.LoggerContext                { return c }
-func (c *NoOpLoggerContext) Logger() gas.Logger                               { return NewNoOpLogger() }
+func (c *NoOpLoggerContext) Logger() gas.Logger                               { return nopLogger }
 
 var nopLogEvent = &NoOpLogEvent{}
 
