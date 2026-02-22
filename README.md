@@ -1,6 +1,6 @@
 # gas-log
 
-Logging backends for the [Gas](https://github.com/gasmod/gas) ecosystem. Implements the `gas.Logger`, `gas.LogEvent`, and `gas.LoggerContext` interfaces with three interchangeable backends.
+Logging backends for the [Gas](https://github.com/gasmod/gas) ecosystem. Implements the `gas.Logger`, `gas.LogEvent`, `gas.LoggerContext`, and `gas.MutableLoggerContext` interfaces with three interchangeable backends.
 
 ```
 go get github.com/gasmod/gas-log
@@ -87,6 +87,19 @@ reqLogger := logger.With().
 reqLogger.Debug("validating token").Send()
 ```
 
+### Mutating base fields
+
+Instead of branching into a new sub-logger, `SetBaseFields()` accumulates fields and on `Apply()` mutates the originating logger in-place. Intended for request-scoped middleware that shares one logger instance across the whole request:
+
+```go
+// Attach persistent fields directly to an existing logger (in-place mutation)
+logger.SetBaseFields().
+    Str("request_id", reqID).
+    Str("user_id", userID).
+    Apply()
+// all subsequent events from logger include request_id and user_id
+```
+
 ### Available field methods
 
 | Method     | Signature                         |
@@ -100,7 +113,7 @@ reqLogger.Debug("validating token").Send()
 | `Duration` | `(key string, val time.Duration)` |
 | `Any`      | `(key string, val any)`           |
 
-These methods are available on both `gas.LogEvent` (returned by level methods) and `gas.LoggerContext` (returned by `With()`).
+These methods are available on `gas.LogEvent` (returned by level methods), `gas.LoggerContext` (returned by `With()`), and `gas.MutableLoggerContext` (returned by `SetBaseFields()`).
 
 ## DI Integration
 

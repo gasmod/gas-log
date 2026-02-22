@@ -100,6 +100,66 @@ func (l *SlogLogger) With() gas.LoggerContext {
 	}
 }
 
+func (l *SlogLogger) SetBaseFields() gas.MutableLoggerContext {
+	return &SlogMutableLoggerContext{
+		attrs:        make([]any, 0, l.eventInitialCapacity),
+		originLogger: l,
+	}
+}
+
+// SlogMutableLoggerContext accumulates fields and on Apply mutates the
+// originating SlogLogger in-place. Implements gas.MutableLoggerContext.
+type SlogMutableLoggerContext struct {
+	attrs        []any
+	originLogger *SlogLogger
+}
+
+var _ gas.MutableLoggerContext = (*SlogMutableLoggerContext)(nil)
+
+func (c *SlogMutableLoggerContext) Str(key, val string) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.String(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Int(key string, val int) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Int(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Int64(key string, val int64) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Int64(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Float64(key string, val float64) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Float64(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Bool(key string, val bool) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Bool(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Err(key string, val error) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Any(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Duration(key string, val time.Duration) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Duration(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Any(key string, val any) gas.MutableLoggerContext {
+	c.attrs = append(c.attrs, slog.Any(key, val))
+	return c
+}
+
+func (c *SlogMutableLoggerContext) Apply() {
+	c.originLogger.logger = c.originLogger.logger.With(c.attrs...)
+}
+
 // SlogLoggerContext accumulates structured fields and produces a sub-logger
 // with those fields baked in when Logger is called. Implements gas.LoggerContext.
 type SlogLoggerContext struct {

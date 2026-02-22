@@ -36,6 +36,10 @@ func (l *NoOpLogger) With() gas.LoggerContext {
 	return nopLoggerContext
 }
 
+func (l *NoOpLogger) SetBaseFields() gas.MutableLoggerContext {
+	return nopMutableLoggerContext
+}
+
 var nopLoggerContext = &NoOpLoggerContext{}
 
 // NoOpLoggerContext is a gas.LoggerContext that discards all fields.
@@ -53,6 +57,24 @@ func (c *NoOpLoggerContext) Err(string, error) gas.LoggerContext              { 
 func (c *NoOpLoggerContext) Duration(string, time.Duration) gas.LoggerContext { return c }
 func (c *NoOpLoggerContext) Any(string, any) gas.LoggerContext                { return c }
 func (c *NoOpLoggerContext) Logger() gas.Logger                               { return nopLogger }
+
+var nopMutableLoggerContext = &NoOpMutableLoggerContext{}
+
+// NoOpMutableLoggerContext is a gas.MutableLoggerContext that discards all fields.
+// All methods return the receiver for chaining and Apply is a no-op.
+type NoOpMutableLoggerContext struct{}
+
+var _ gas.MutableLoggerContext = (*NoOpMutableLoggerContext)(nil)
+
+func (c *NoOpMutableLoggerContext) Str(string, string) gas.MutableLoggerContext             { return c }
+func (c *NoOpMutableLoggerContext) Int(string, int) gas.MutableLoggerContext                { return c }
+func (c *NoOpMutableLoggerContext) Int64(string, int64) gas.MutableLoggerContext            { return c }
+func (c *NoOpMutableLoggerContext) Float64(string, float64) gas.MutableLoggerContext        { return c }
+func (c *NoOpMutableLoggerContext) Bool(string, bool) gas.MutableLoggerContext              { return c }
+func (c *NoOpMutableLoggerContext) Err(string, error) gas.MutableLoggerContext              { return c }
+func (c *NoOpMutableLoggerContext) Duration(string, time.Duration) gas.MutableLoggerContext { return c }
+func (c *NoOpMutableLoggerContext) Any(string, any) gas.MutableLoggerContext                { return c }
+func (c *NoOpMutableLoggerContext) Apply()                                                  {}
 
 var nopLogEvent = &NoOpLogEvent{}
 

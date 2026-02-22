@@ -6,15 +6,16 @@ description: >
   ecosystem. Use this skill when writing, reviewing, or debugging Go code
   involving structured logging in Gas services. Covers the three backends
   (ZeroLogLogger, SlogLogger, NoOpLogger), the fluent gas.Logger/LogEvent/
-  LoggerContext interfaces, sub-loggers via With(), context-scoped logging
-  via gas.WithLogger/gas.LoggerFromContext, DI registration via
+  LoggerContext/MutableLoggerContext interfaces, sub-loggers via With(),
+  in-place logger mutation via SetBaseFields()/Apply(), context-scoped
+  logging via gas.WithLogger/gas.LoggerFromContext, DI registration via
   gas.WithServiceInstance, and level mapping across backends.
 ---
 
 # Gas Log Package Reference
 
 Pluggable logging backends for the Gas ecosystem. Implements `gas.Logger`,
-`gas.LogEvent`, and `gas.LoggerContext` with three interchangeable backends.
+`gas.LogEvent`, `gas.LoggerContext`, and `gas.MutableLoggerContext` with three interchangeable backends.
 
 ```
 import gaslog "github.com/gasmod/gas-log"
@@ -41,7 +42,7 @@ logger.Info("request handled").
     Send()
 ```
 
-### Field methods (on both LogEvent and LoggerContext)
+### Field methods (on LogEvent, LoggerContext, and MutableLoggerContext)
 
 ```go
 Str(key, val string)
@@ -66,6 +67,41 @@ reqLogger := logger.With().
 
 reqLogger.Debug("validating token").Send()
 // all events from reqLogger include request_id and service
+```
+
+## Mutating base fields (SetBaseFields)
+
+Unlike `With()` which branches into a new sub-logger, `SetBaseFields()` accumulates
+fields and on `Apply()` mutates the originating logger in-place.
+
+**When to use `SetBaseFields` vs `With`:**
+- Use `With()` when you want a new, independent sub-logger (e.g. a per-request logger passed down to child calls).
+- Use `SetBaseFields()` when middleware owns one logger instance and needs to stamp persistent fields onto it before the rest of the request runs.
+
+```go
+// In middleware: mutate the shared logger in-place, then continue
+logger.SetBaseFields().
+    Str("request_id", reqID).
+    Str("user_id", userID).
+    Apply()
+// all subsequent events from logger include request_id and user_id
+```
+
+Typical middleware pattern:
+
+```go
+func loggingMiddleware(logger gas.Logger) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            logger.SetBaseFields().
+                Str("request_id", r.Header.Get("X-Request-ID")).
+                Str("method", r.Method).
+                Str("path", r.URL.Path).
+                Apply()
+            next.ServeHTTP(w, r)
+        })
+    }
+}
 ```
 
 ## Context-Scoped Logging

@@ -65,6 +65,64 @@ func (l *ZeroLogLogger) With() gas.LoggerContext {
 	return &ZeroLogLoggerContext{ctx: l.logger.With()}
 }
 
+func (l *ZeroLogLogger) SetBaseFields() gas.MutableLoggerContext {
+	return &ZeroLogMutableLoggerContext{ctx: l.logger.With(), originLogger: l}
+}
+
+// ZeroLogMutableLoggerContext accumulates fields and on Apply mutates the
+// originating ZeroLogLogger in-place. Implements gas.MutableLoggerContext.
+type ZeroLogMutableLoggerContext struct {
+	ctx          zerolog.Context
+	originLogger *ZeroLogLogger
+}
+
+var _ gas.MutableLoggerContext = (*ZeroLogMutableLoggerContext)(nil)
+
+func (c *ZeroLogMutableLoggerContext) Str(key, val string) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Str(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Int(key string, val int) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Int(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Int64(key string, val int64) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Int64(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Float64(key string, val float64) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Float64(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Bool(key string, val bool) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Bool(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Err(key string, val error) gas.MutableLoggerContext {
+	c.ctx = c.ctx.AnErr(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Duration(key string, val time.Duration) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Dur(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Any(key string, val any) gas.MutableLoggerContext {
+	c.ctx = c.ctx.Any(key, val)
+	return c
+}
+
+func (c *ZeroLogMutableLoggerContext) Apply() {
+	l := c.ctx.Logger()
+	c.originLogger.logger = &l
+}
+
 // ZeroLogLoggerContext wraps a [zerolog.Context] to implement gas.LoggerContext.
 // Fields added via chained methods are baked into the sub-logger returned by Logger.
 type ZeroLogLoggerContext struct {
