@@ -37,7 +37,7 @@ func WithEventInitialCapacity(capacity int) SlogLoggerOption {
 // NewSlogLogger returns a SlogLoggerCtor that constructs a SlogLogger with the provided SlogLoggerOption values.
 func NewSlogLogger(opts ...SlogLoggerOption) SlogLoggerCtor {
 	return func() gas.Logger {
-		l := &SlogLogger{eventInitialCapacity: 5}
+		l := &SlogLogger{logger: slog.Default(), eventInitialCapacity: 5}
 		for _, opt := range opts {
 			opt(l)
 		}

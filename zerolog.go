@@ -6,6 +6,7 @@ import (
 	"github.com/gasmod/gas"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 // ZeroLogLogger adapts a [zerolog.Logger] to the gas.Logger interface.
@@ -31,7 +32,7 @@ func WithZeroLogInstance(logger *zerolog.Logger) ZeroLogLoggerOption {
 // NewZeroLogLogger creates a new ZeroLogLoggerCtor with optional configuration applied via ZeroLogLoggerOption functions.
 func NewZeroLogLogger(opts ...ZeroLogLoggerOption) ZeroLogLoggerCtor {
 	return func() gas.Logger {
-		l := &ZeroLogLogger{}
+		l := &ZeroLogLogger{logger: &log.Logger}
 		for _, opt := range opts {
 			opt(l)
 		}
