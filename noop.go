@@ -16,11 +16,11 @@ type NoOpLogger struct{}
 var _ gas.Logger = (*NoOpLogger)(nil)
 
 // NoOpLoggerCtor defines a constructor function that returns a nop-logger implementing the gas.Logger interface.
-type NoOpLoggerCtor func() gas.Logger
+type NoOpLoggerCtor func() *NoOpLogger
 
 // NewNoOpLogger returns a NoOpLoggerCtor that constructs a nop-logger implementing the gas.Logger interface.
 func NewNoOpLogger() NoOpLoggerCtor {
-	return func() gas.Logger {
+	return func() *NoOpLogger {
 		return nopLogger
 	}
 }
