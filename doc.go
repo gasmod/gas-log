@@ -24,6 +24,6 @@
 // Register a logger in the Gas DI container so services receive it automatically:
 //
 //	app := gas.NewApp(
-//		gas.WithServiceInstance[gas.Logger](gaslog.NewZeroLogLogger(&zl)),
+//		gas.WithService[gas.Logger](gaslog.NewZeroLogLogger(gaslog.WithZeroLogInstance(&zl)), gas.ServiceLifetimeScoped),
 //	)
 package log

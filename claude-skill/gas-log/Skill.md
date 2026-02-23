@@ -9,7 +9,7 @@ description: >
   LoggerContext/MutableLoggerContext interfaces, sub-loggers via With(),
   in-place logger mutation via SetBaseFields()/Apply(), context-scoped
   logging via gas.WithLogger/gas.LoggerFromContext, DI registration via
-  gas.WithServiceInstance, and level mapping across backends.
+  gas.WithService with ServiceLifetimeScoped, and level mapping across backends.
 ---
 
 # Gas Log Package Reference
@@ -23,11 +23,60 @@ import gaslog "github.com/gasmod/gas-log"
 
 ## Backends
 
-| Backend     | Constructor                                                    | Backing library     | Notes                                                                 |
-|-------------|----------------------------------------------------------------|---------------------|-----------------------------------------------------------------------|
-| **Zerolog** | `NewZeroLogLogger(logger *zerolog.Logger)`                     | rs/zerolog          | High-performance structured JSON. Full level support including Trace. |
-| **Slog**    | `NewSlogLogger(logger *slog.Logger, eventInitialCapacity int)` | `log/slog` (stdlib) | Zero external deps. Trace maps to Debug (slog has no Trace).          |
-| **NoOp**    | `NewNoOpLogger()`                                              | none                | Discards all output. Singleton, zero-allocation. For tests.           |
+| Backend     | Constructor                                     | Backing library     | Notes                                                                 |
+|-------------|-------------------------------------------------|---------------------|-----------------------------------------------------------------------|
+| **Zerolog** | `NewZeroLogLogger(opts ...ZeroLogLoggerOption)` | rs/zerolog          | High-performance structured JSON. Full level support including Trace. |
+| **Slog**    | `NewSlogLogger(opts ...SlogLoggerOption)`       | `log/slog` (stdlib) | Zero external deps. Trace maps to Debug (slog has no Trace).          |
+| **NoOp**    | `NewNoOpLogger()`                               | none                | Discards all output. Singleton, zero-allocation. For tests.           |
+
+Each constructor returns a constructor function type that the Gas DI container accepts directly. When no options are provided, backends use defaults: Zerolog uses the global `zerolog/log.Logger`; Slog uses `slog.Default()` with `eventInitialCapacity` of 5.
+
+## Constructor Types and Options
+
+### ZeroLogLogger
+
+```go
+// Constructor type
+type ZeroLogLoggerCtor func() *ZeroLogLogger
+
+// Constructor
+func NewZeroLogLogger(opts ...ZeroLogLoggerOption) ZeroLogLoggerCtor
+
+// Options
+type ZeroLogLoggerOption func(*ZeroLogLogger)
+
+func WithZeroLogInstance(logger *zerolog.Logger) ZeroLogLoggerOption
+```
+
+### SlogLogger
+
+```go
+// Constructor type
+type SlogLoggerCtor func() *SlogLogger
+
+// Constructor
+func NewSlogLogger(opts ...SlogLoggerOption) SlogLoggerCtor
+
+// Options
+type SlogLoggerOption func(*SlogLogger)
+
+func WithSlogInstance(logger *slog.Logger) SlogLoggerOption
+func WithEventInitialCapacity(capacity int) SlogLoggerOption
+```
+
+`WithEventInitialCapacity` controls the pre-allocated attribute slice capacity per event. Reduces allocations when you know the typical field count. Values ≤ 0 default to 5. Each `LogEvent` collects fields and emits them as a single `slog.LogAttrs` call on `Send()`.
+
+### NoOpLogger
+
+```go
+// Constructor type
+type NoOpLoggerCtor func() *NoOpLogger
+
+// Constructor
+func NewNoOpLogger() NoOpLoggerCtor
+```
+
+Singleton pattern — all instances share the same underlying value. Zero allocations per log call. All methods return chainable no-ops.
 
 ## Fluent API
 
@@ -147,35 +196,44 @@ func (s *Service) process(ctx context.Context) {
 
 ## DI Registration
 
-Register as a `gas.Logger` instance (not a service — loggers don't need
-lifecycle management):
+Pass the constructor function to `gas.WithService` with `gas.ServiceLifetimeScoped`.
+The DI container calls it once per request scope to produce the logger instance:
 
 ```go
 zl := zerolog.New(os.Stdout).With().Timestamp().Logger()
-logger := gaslog.NewZeroLogLogger(&zl)
 
 app := gas.NewApp(
-    gas.WithServiceInstance[gas.Logger](logger),
+    gas.WithService[gas.Logger](gaslog.NewZeroLogLogger(gaslog.WithZeroLogInstance(&zl)), gas.ServiceLifetimeScoped),
     // ...
 )
 ```
 
-Or with slog (zero external deps):
+With slog (zero external deps):
 
 ```go
 sl := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-logger := gaslog.NewSlogLogger(sl, 5)
 
 app := gas.NewApp(
-    gas.WithServiceInstance[gas.Logger](logger),
+    gas.WithService[gas.Logger](gaslog.NewSlogLogger(
+        gaslog.WithSlogInstance(sl),
+        gaslog.WithEventInitialCapacity(5),
+    ), gas.ServiceLifetimeScoped),
 )
 ```
 
-Or NoOp for tests:
+With NoOp for tests:
 
 ```go
 app := gas.NewApp(
-    gas.WithServiceInstance[gas.Logger](gaslog.NewNoOpLogger()),
+    gas.WithService[gas.Logger](gaslog.NewNoOpLogger(), gas.ServiceLifetimeScoped),
+)
+```
+
+Using defaults (no options — Zerolog uses `log.Logger`, Slog uses `slog.Default()`):
+
+```go
+app := gas.NewApp(
+    gas.WithService[gas.Logger](gaslog.NewZeroLogLogger(), gas.ServiceLifetimeScoped),
 )
 ```
 
@@ -199,34 +257,3 @@ func (s *Service) Init() error {
     return nil
 }
 ```
-
-## Backend Details
-
-### ZeroLogLogger
-
-```go
-func NewZeroLogLogger(logger *zerolog.Logger) *ZeroLogLogger
-```
-
-Wraps a `zerolog.Logger`. Full level support. `Flush()` calls
-`zerolog.Logger`'s writer flush if available.
-
-### SlogLogger
-
-```go
-func NewSlogLogger(logger *slog.Logger, eventInitialCapacity int) *SlogLogger
-```
-
-`eventInitialCapacity` controls pre-allocated attribute slice capacity per
-event. Reduces allocations when you know the typical field count. Values ≤ 0
-default to 5. Each `LogEvent` collects fields and emits them as a single
-`slog.LogAttrs` call on `Send()`.
-
-### NoOpLogger
-
-```go
-func NewNoOpLogger() *NoOpLogger
-```
-
-Singleton pattern — all instances share the same underlying value. Zero
-allocations per log call. All methods return chainable no-ops.

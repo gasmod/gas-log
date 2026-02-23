@@ -8,11 +8,13 @@ go get github.com/gasmod/gas-log
 
 ## Backends
 
-| Backend     | Constructor                                                    | Backing library                             | Notes                                                                         |
-|-------------|----------------------------------------------------------------|---------------------------------------------|-------------------------------------------------------------------------------|
-| **Zerolog** | `NewZeroLogLogger(logger *zerolog.Logger)`                     | [rs/zerolog](https://github.com/rs/zerolog) | High-performance structured JSON logging. Full level support including Trace. |
-| **Slog**    | `NewSlogLogger(logger *slog.Logger, eventInitialCapacity int)` | `log/slog` (stdlib)                         | Zero-dependency option. Trace maps to Debug (slog has no Trace level).        |
-| **NoOp**    | `NewNoOpLogger()`                                              | none                                        | Silently discards all output. Singleton, zero-allocation. Useful for tests.   |
+| Backend     | Constructor                                        | Backing library                             | Notes                                                                         |
+|-------------|----------------------------------------------------|---------------------------------------------|-------------------------------------------------------------------------------|
+| **Zerolog** | `NewZeroLogLogger(opts ...ZeroLogLoggerOption)`    | [rs/zerolog](https://github.com/rs/zerolog) | High-performance structured JSON logging. Full level support including Trace. |
+| **Slog**    | `NewSlogLogger(opts ...SlogLoggerOption)`          | `log/slog` (stdlib)                         | Zero-dependency option. Trace maps to Debug (slog has no Trace level).        |
+| **NoOp**    | `NewNoOpLogger()`                                  | none                                        | Silently discards all output. Singleton, zero-allocation. Useful for tests.   |
+
+Each constructor returns a constructor function type (`ZeroLogLoggerCtor`, `SlogLoggerCtor`, `NoOpLoggerCtor`) compatible with the Gas DI container. When no options are provided, backends use sensible defaults: Zerolog uses the global `zerolog/log.Logger`; Slog uses `slog.Default()` with an initial event capacity of 5.
 
 ## Usage
 
@@ -30,7 +32,8 @@ import (
 
 func main() {
 	zl := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	logger := gaslog.NewZeroLogLogger(&zl)
+	ctor := gaslog.NewZeroLogLogger(gaslog.WithZeroLogInstance(&zl))
+	logger := ctor()
 
 	logger.Info("server started").Str("addr", ":8080").Send()
 	// {"level":"info","addr":":8080","time":"...","message":"server started"}
@@ -51,7 +54,11 @@ import (
 
 func main() {
 	sl := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	logger := gaslog.NewSlogLogger(sl, 5) // 5 = initial attr capacity per event
+	ctor := gaslog.NewSlogLogger(
+		gaslog.WithSlogInstance(sl),
+		gaslog.WithEventInitialCapacity(5),
+	)
+	logger := ctor()
 
 	logger.Info("server started").Str("addr", ":8080").Send()
 	// {"level":"INFO","msg":"server started","addr":":8080"}
@@ -61,7 +68,7 @@ func main() {
 ### NoOp
 
 ```go
-logger := gaslog.NewNoOpLogger() // all calls are no-ops
+logger := gaslog.NewNoOpLogger()() // all calls are no-ops
 logger.Error("this goes nowhere").Send()
 ```
 
@@ -117,7 +124,7 @@ These methods are available on `gas.LogEvent` (returned by level methods), `gas.
 
 ## DI Integration
 
-Register a logger in the Gas DI container so services can receive it via constructor injection:
+Register a logger in the Gas DI container by passing the constructor function to `gas.WithService`:
 
 ```go
 package main
@@ -132,10 +139,9 @@ import (
 
 func main() {
 	zl := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	logger := gaslog.NewZeroLogLogger(&zl)
 
 	app := gas.NewApp(
-		gas.WithServiceInstance[gas.Logger](logger),
+		gas.WithService[gas.Logger](gaslog.NewZeroLogLogger(gaslog.WithZeroLogInstance(&zl)), gas.ServiceLifetimeScoped),
 		// ...
 	)
 	app.Run()
