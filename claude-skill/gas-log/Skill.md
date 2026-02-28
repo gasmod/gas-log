@@ -27,7 +27,6 @@ import gaslog "github.com/gasmod/gas-log"
 |-------------|-------------------------------------------------|---------------------|-----------------------------------------------------------------------|
 | **Zerolog** | `NewZeroLogLogger(opts ...ZeroLogLoggerOption)` | rs/zerolog          | High-performance structured JSON. Full level support including Trace. |
 | **Slog**    | `NewSlogLogger(opts ...SlogLoggerOption)`       | `log/slog` (stdlib) | Zero external deps. Trace maps to Debug (slog has no Trace).          |
-| **NoOp**    | `NewNoOpLogger()`                               | none                | Discards all output. Singleton, zero-allocation. For tests.           |
 
 Each constructor returns a constructor function type that the Gas DI container accepts directly. When no options are provided, backends use defaults: Zerolog uses the global `zerolog/log.Logger`; Slog uses `slog.Default()` with `eventInitialCapacity` of 5.
 
@@ -65,18 +64,6 @@ func WithEventInitialCapacity(capacity int) SlogLoggerOption
 ```
 
 `WithEventInitialCapacity` controls the pre-allocated attribute slice capacity per event. Reduces allocations when you know the typical field count. Values ≤ 0 default to 5. Each `LogEvent` collects fields and emits them as a single `slog.LogAttrs` call on `Send()`.
-
-### NoOpLogger
-
-```go
-// Constructor type
-type NoOpLoggerCtor func() *NoOpLogger
-
-// Constructor
-func NewNoOpLogger() NoOpLoggerCtor
-```
-
-Singleton pattern — all instances share the same underlying value. Zero allocations per log call. All methods return chainable no-ops.
 
 ## Fluent API
 
@@ -218,14 +205,6 @@ app := gas.NewApp(
         gaslog.WithSlogInstance(sl),
         gaslog.WithEventInitialCapacity(5),
     ), gas.ServiceLifetimeScoped),
-)
-```
-
-With NoOp for tests:
-
-```go
-app := gas.NewApp(
-    gas.WithService[gas.Logger](gaslog.NewNoOpLogger(), gas.ServiceLifetimeScoped),
 )
 ```
 

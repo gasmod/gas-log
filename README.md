@@ -12,9 +12,8 @@ go get github.com/gasmod/gas-log
 |-------------|----------------------------------------------------|---------------------------------------------|-------------------------------------------------------------------------------|
 | **Zerolog** | `NewZeroLogLogger(opts ...ZeroLogLoggerOption)`    | [rs/zerolog](https://github.com/rs/zerolog) | High-performance structured JSON logging. Full level support including Trace. |
 | **Slog**    | `NewSlogLogger(opts ...SlogLoggerOption)`          | `log/slog` (stdlib)                         | Zero-dependency option. Trace maps to Debug (slog has no Trace level).        |
-| **NoOp**    | `NewNoOpLogger()`                                  | none                                        | Silently discards all output. Singleton, zero-allocation. Useful for tests.   |
 
-Each constructor returns a constructor function type (`ZeroLogLoggerCtor`, `SlogLoggerCtor`, `NoOpLoggerCtor`) compatible with the Gas DI container. When no options are provided, backends use sensible defaults: Zerolog uses the global `zerolog/log.Logger`; Slog uses `slog.Default()` with an initial event capacity of 5.
+Each constructor returns a constructor function type (`ZeroLogLoggerCtor`, `SlogLoggerCtor`) compatible with the Gas DI container. When no options are provided, backends use sensible defaults: Zerolog uses the global `zerolog/log.Logger`; Slog uses `slog.Default()` with an initial event capacity of 5.
 
 ## Usage
 
@@ -63,13 +62,6 @@ func main() {
 	logger.Info("server started").Str("addr", ":8080").Send()
 	// {"level":"INFO","msg":"server started","addr":":8080"}
 }
-```
-
-### NoOp
-
-```go
-logger := gaslog.NewNoOpLogger()() // all calls are no-ops
-logger.Error("this goes nowhere").Send()
 ```
 
 ## Fluent API
