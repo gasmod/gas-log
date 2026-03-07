@@ -1,3 +1,4 @@
+//nolint:revive // intentional package name
 package log
 
 import (
