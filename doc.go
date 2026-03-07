@@ -26,4 +26,6 @@
 //	app := gas.NewApp(
 //		gas.WithService[gas.Logger](gaslog.NewZeroLogLogger(gaslog.WithZeroLogInstance(&zl)), gas.ServiceLifetimeScoped),
 //	)
+//
+//nolint:revive // intentional package name
 package log

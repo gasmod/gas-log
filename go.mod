@@ -3,13 +3,13 @@ module github.com/gasmod/gas-log
 go 1.25.6
 
 require (
-	github.com/gasmod/gas v0.1.23
+	github.com/gasmod/gas v0.2.0
 	github.com/rs/zerolog v1.34.0
 )
 
 require (
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/gasmod/gas-config v0.1.5 // indirect
+	github.com/gasmod/gas-config v0.2.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.5 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
