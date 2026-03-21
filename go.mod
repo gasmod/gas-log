@@ -3,7 +3,7 @@ module github.com/gasmod/gas-log
 go 1.25.6
 
 require (
-	github.com/gasmod/gas v0.2.11
+	github.com/gasmod/gas v0.2.12
 	github.com/rs/zerolog v1.34.0
 )
 
