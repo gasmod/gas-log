@@ -138,8 +138,7 @@ func (c *ZeroLogMutableLoggerContext) Any(key string, val any) gas.MutableLogger
 
 // Apply writes the accumulated context fields to the originating ZeroLogLogger by mutating it in place.
 func (c *ZeroLogMutableLoggerContext) Apply() {
-	l := c.ctx.Logger()
-	c.originLogger.logger = &l
+	c.originLogger.logger = new(c.ctx.Logger())
 }
 
 // ZeroLogLoggerContext wraps a [zerolog.Context] to implement gas.LoggerContext.
@@ -200,8 +199,7 @@ func (c *ZeroLogLoggerContext) Any(key string, val any) gas.LoggerContext {
 
 // Logger creates a new structured logger instance with all chained fields applied.
 func (c *ZeroLogLoggerContext) Logger() gas.Logger {
-	l := c.ctx.Logger()
-	return &ZeroLogLogger{logger: &l}
+	return &ZeroLogLogger{logger: new(c.ctx.Logger())}
 }
 
 // ZeroLogLogEvent wraps a [zerolog.Event] to implement gas.LogEvent.
