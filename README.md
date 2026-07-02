@@ -1,5 +1,7 @@
 # gas-log
 
+[![Test](https://github.com/gasmod/gas-log/actions/workflows/test.yml/badge.svg)](https://github.com/gasmod/gas-log/actions/workflows/test.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/gasmod/gas-log.svg)](https://pkg.go.dev/github.com/gasmod/gas-log) ![Go Version](https://img.shields.io/github/go-mod/go-version/gasmod/gas-log) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Logging backends for the [Gas](https://github.com/gasmod/gas) ecosystem. Implements the `gas.Logger`, `gas.LogEvent`, `gas.LoggerContext`, and `gas.MutableLoggerContext` interfaces with three interchangeable backends.
 
 ```
