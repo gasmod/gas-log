@@ -1,5 +1,7 @@
 # gas-log
 
+[![Test](https://github.com/gasmod/gas-log/actions/workflows/test.yml/badge.svg)](https://github.com/gasmod/gas-log/actions/workflows/test.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/gasmod/gas-log.svg)](https://pkg.go.dev/github.com/gasmod/gas-log) ![Go Version](https://img.shields.io/github/go-mod/go-version/gasmod/gas-log) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Logging backends for the [Gas](https://github.com/gasmod/gas) ecosystem. Implements the `gas.Logger`, `gas.LogEvent`, `gas.LoggerContext`, and `gas.MutableLoggerContext` interfaces with three interchangeable backends.
 
 ```
@@ -113,6 +115,38 @@ logger.SetBaseFields().
 | `Any`      | `(key string, val any)`           |
 
 These methods are available on `gas.LogEvent` (returned by level methods), `gas.LoggerContext` (returned by `With()`), and `gas.MutableLoggerContext` (returned by `SetBaseFields()`).
+
+## Shipping logs over HTTP
+
+`NewShippingLogger` returns a `gas.Logger` that writes locally **and** ships every record to an HTTP endpoint. It is built on the Slog backend: records are captured by an `slog.Handler`, batched, and delivered by a background goroutine. The wire shape is a pluggable `Marshaler`, so the transport is reusable across schemas; an OTLP/HTTP JSON marshaler ships in the box.
+
+```go
+logger := gaslog.NewShippingLogger(
+    "https://logs.example.com/v1/logs",
+    gaslog.NewOTLPMarshaler(
+        gaslog.WithServiceName("my-service"),
+        gaslog.WithServiceVersion("1.4.2"),
+    ),
+    gaslog.WithHeader("X-API-Key", os.Getenv("LOG_KEY")),
+    gaslog.WithBatchSize(100),
+    gaslog.WithFlushInterval(2*time.Second),
+)()
+
+logger.Info("request handled").Str("method", "GET").Int("status", 200).Send()
+```
+
+By default it also logs JSON to stderr; pass `WithLocalHandler` to change the local sink or `WithoutLocalHandler` to ship only. Delivery is best-effort: records are dropped (never blocked) when the queue is full, and delivery failures go to `WithErrorHandler` rather than the logging call site.
+
+The returned logger implements `gas.Service`: when registered in the DI container, `Close()` is called at shutdown and drains any buffered records. Outside the container, call `Flush()` before exit or `Close()` to stop the delivery goroutine.
+
+To ship a different wire shape, implement `Marshaler`:
+
+```go
+type Marshaler interface {
+    Marshal(records []Record) ([]byte, error)
+    ContentType() string
+}
+```
 
 ## DI Integration
 
